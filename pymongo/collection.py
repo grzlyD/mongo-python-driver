@@ -193,6 +193,9 @@ class Collection(common.BaseObject):
     def _socket_for_writes(self):
         return self.__database.client._socket_for_writes()
 
+    def _stats(self):
+        return self.__database.command('getLastRequestStatistics')
+
     def _command(self, sock_info, command, slave_ok=False,
                  read_preference=None,
                  codec_options=None, check=True, allowable_errors=None,
@@ -258,6 +261,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 collation=collation, session=session)
+            print '__create stats', self._stats()
 
     def __getattr__(self, name):
         """Get a sub-collection of this collection by name.
@@ -1489,6 +1493,7 @@ class Collection(common.BaseObject):
             result = self._command(sock_info, cmd, slave_ok,
                                    read_concern=self.read_concern,
                                    session=session)
+            print 'parallel_scan stats', self._stats()
 
         cursors = []
         for cursor in result['cursors']:
@@ -1509,6 +1514,8 @@ class Collection(common.BaseObject):
                 read_concern=self.read_concern,
                 collation=collation,
                 session=session)
+            print '_count stats', self._stats()
+            
         if res.get("errmsg", "") == "ns missing":
             return 0
         return int(res["n"])
@@ -1622,6 +1629,8 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
+            print 'create_indexes stats', self._stats()
+
         return names
 
     def __create_index(self, keys, index_options, session, **kwargs):
@@ -1654,6 +1663,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
+            print '__create_index stats', self._stats()
 
     def create_index(self, keys, session=None, **kwargs):
         """Creates an index on this collection.
@@ -1874,6 +1884,7 @@ class Collection(common.BaseObject):
                           write_concern=self.write_concern,
                           parse_write_concern_error=True,
                           session=session)
+            print 'drop_index stats', self._stats()
 
     def reindex(self, session=None, **kwargs):
         """Rebuilds all indexes on this collection.
@@ -1904,9 +1915,11 @@ class Collection(common.BaseObject):
         cmd = SON([("reIndex", self.__name)])
         cmd.update(kwargs)
         with self._socket_for_writes() as sock_info:
-            return self._command(
+            result = self._command(
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 parse_write_concern_error=True, session=session)
+            print 'reindex stats', self._stats()
+            return result
 
     def list_indexes(self, session=None):
         """Get a cursor over the index documents for this collection.
@@ -1940,6 +1953,7 @@ class Collection(common.BaseObject):
                                                ReadPreference.PRIMARY,
                                                codec_options,
                                                session=s)["cursor"]
+                        print 'list_indexes stats', self._stats()
                     except OperationFailure as exc:
                         # Ignore NamespaceNotFound errors to match the behavior
                         # of reading from *.system.indexes.
@@ -2342,8 +2356,10 @@ class Collection(common.BaseObject):
         cmd.update(kwargs)
 
         with self._socket_for_reads() as (sock_info, slave_ok):
-            return self._command(sock_info, cmd, slave_ok,
+            result = self._command(sock_info, cmd, slave_ok,
                                  collation=collation)["retval"]
+            print 'group stats', self._stats()
+            return result
 
     def rename(self, new_name, session=None, **kwargs):
         """Rename this collection.
@@ -2443,9 +2459,11 @@ class Collection(common.BaseObject):
         collation = validate_collation_or_none(kwargs.pop('collation', None))
         cmd.update(kwargs)
         with self._socket_for_reads() as (sock_info, slave_ok):
-            return self._command(sock_info, cmd, slave_ok,
+            result = self._command(sock_info, cmd, slave_ok,
                                  read_concern=self.read_concern,
                                  collation=collation, session=session)["values"]
+            print 'distinct stats', self._stats()
+            return result
 
     def map_reduce(self, map, reduce, out, full_response=False, session=None,
                    **kwargs):
@@ -2532,6 +2550,8 @@ class Collection(common.BaseObject):
                     sock_info, cmd, slave_ok, ReadPreference.PRIMARY,
                     parse_write_concern_error=not inline,
                     collation=collation, session=session)
+            
+            print 'map_reduce stats', self._stats()
 
         if full_response or not response.get('result'):
             return response
@@ -2592,6 +2612,8 @@ class Collection(common.BaseObject):
                 res = self._command(sock_info, cmd, slave_ok,
                                     collation=collation, session=session)
 
+        print 'inline_map_reduce stats', self._stats()
+
         if full_response:
             return res
         else:
@@ -2646,6 +2668,7 @@ class Collection(common.BaseObject):
                                 collation=collation, session=session,
                                 retryable_write=retryable_write)
             _check_write_command_response(out)
+            print '__find_and_modify stats', self._stats()
             return out.get("value")
 
         return self.__database.client._retryable_write(
@@ -3057,10 +3080,12 @@ class Collection(common.BaseObject):
                 wc_doc = self.write_concern.document
                 if wc_doc:
                     cmd['writeConcern'] = wc_doc
-            return self._command(
+            result = self._command(
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 allowable_errors=[_NO_OBJ_ERROR], collation=collation,
                 session=session, retryable_write=retryable_write)
+            print 'find_and_modify stats', self._stats()
+            return result
 
         out = self.__database.client._retryable_write(
             acknowledged, _find_and_modify, None)
