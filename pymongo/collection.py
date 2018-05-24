@@ -17,6 +17,7 @@
 import collections
 import datetime
 import warnings
+import logging
 
 from bson.code import Code
 from bson.objectid import ObjectId
@@ -55,6 +56,7 @@ from pymongo.write_concern import WriteConcern
 _NO_OBJ_ERROR = "No matching object found"
 _UJOIN = u"%s.%s"
 
+logger = logging.getLogger(__name__)
 
 class ReturnDocument(object):
     """An enum used with
@@ -261,7 +263,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 collation=collation, session=session)
-            print '__create stats', self._stats()
+            logger.debug('__create stats ' + str(self._stats()))
 
     def __getattr__(self, name):
         """Get a sub-collection of this collection by name.
@@ -570,7 +572,7 @@ class Collection(common.BaseObject):
                 if bypass_doc_val and sock_info.max_wire_version >= 4:
                     command['bypassDocumentValidation'] = True
 
-                return sock_info.command(
+                _result = sock_info.command(
                     self.__database.name,
                     command,
                     codec_options=self.__write_response_codec_options,
@@ -578,6 +580,8 @@ class Collection(common.BaseObject):
                     session=session,
                     client=self.__database.client,
                     retryable_write=retryable_write)
+                logger.debug('insert_one stats ' + str(self._stats()))
+                return _result
 
             result = self.__database.client._retryable_write(
                 True, _insert_command, session)
@@ -590,6 +594,8 @@ class Collection(common.BaseObject):
                     bypass_doc_val, message.insert, self.__full_name, [doc],
                     check_keys, False, concern, False,
                     self.__write_response_codec_options)
+                logger.debug('insert_one legacy stats ' + str(self._stats()))
+
         if not isinstance(doc, RawBSONDocument):
             return doc.get('_id')
 
@@ -799,6 +805,7 @@ class Collection(common.BaseObject):
                 session=session,
                 client=self.__database.client,
                 retryable_write=retryable_write).copy()
+            logger.debug('update stats ' + str(self._stats()))
             _check_write_command_response(result)
             # Add the updatedExisting field for compatibility.
             if result.get('n') and 'upserted' not in result:
@@ -813,11 +820,13 @@ class Collection(common.BaseObject):
             return result
         else:
             # Legacy OP_UPDATE.
-            return self._legacy_write(
+            result = self._legacy_write(
                 sock_info, 'update', command, op_id,
                 bypass_doc_val, message.update, self.__full_name, upsert,
                 multi, criteria, document, False, concern, check_keys,
                 self.__write_response_codec_options)
+            logger.debug('update legacy stats ' + str(self._stats()))
+            return result
 
     def _update_retryable(
             self, criteria, document, upsert=False,
@@ -1100,15 +1109,18 @@ class Collection(common.BaseObject):
                 session=session,
                 client=self.__database.client,
                 retryable_write=retryable_write)
+            logger.debug('delete stats ' + str(self._stats()))
             _check_write_command_response(result)
             return result
         else:
             # Legacy OP_DELETE.
-            return self._legacy_write(
+            result = self._legacy_write(
                 sock_info, 'delete', command, op_id,
                 False, message.delete, self.__full_name, criteria,
                 False, concern, self.__write_response_codec_options,
                 int(not multi))
+            logger.debug('delete legacy stats ' + str(self._stats()))
+            return result
 
     def _delete_retryable(
             self, criteria, multi,
@@ -1493,7 +1505,7 @@ class Collection(common.BaseObject):
             result = self._command(sock_info, cmd, slave_ok,
                                    read_concern=self.read_concern,
                                    session=session)
-            print 'parallel_scan stats', self._stats()
+            logger.debug('parallel_scan stats ' + str(self._stats()))
 
         cursors = []
         for cursor in result['cursors']:
@@ -1514,7 +1526,7 @@ class Collection(common.BaseObject):
                 read_concern=self.read_concern,
                 collation=collation,
                 session=session)
-            print '_count stats', self._stats()
+            logger.debug('_count stats ' + str(self._stats()))
             
         if res.get("errmsg", "") == "ns missing":
             return 0
@@ -1629,7 +1641,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
-            print 'create_indexes stats', self._stats()
+            logger.debug('create_indexes stats ' + str(self._stats()))
 
         return names
 
@@ -1663,7 +1675,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
-            print '__create_index stats', self._stats()
+            logger.debug('__create_index stats ' + self._stats()))
 
     def create_index(self, keys, session=None, **kwargs):
         """Creates an index on this collection.
@@ -1884,7 +1896,7 @@ class Collection(common.BaseObject):
                           write_concern=self.write_concern,
                           parse_write_concern_error=True,
                           session=session)
-            print 'drop_index stats', self._stats()
+            logger.debug('drop_index stats ' + str(self._stats()))
 
     def reindex(self, session=None, **kwargs):
         """Rebuilds all indexes on this collection.
@@ -1918,7 +1930,7 @@ class Collection(common.BaseObject):
             result = self._command(
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 parse_write_concern_error=True, session=session)
-            print 'reindex stats', self._stats()
+            logger.debug('reindex stats ' + str(self._stats()))
             return result
 
     def list_indexes(self, session=None):
@@ -1953,7 +1965,7 @@ class Collection(common.BaseObject):
                                                ReadPreference.PRIMARY,
                                                codec_options,
                                                session=s)["cursor"]
-                        print 'list_indexes stats', self._stats()
+                        logger.debug('list_indexes stats ' + str(self._stats()))
                     except OperationFailure as exc:
                         # Ignore NamespaceNotFound errors to match the behavior
                         # of reading from *.system.indexes.
@@ -2104,6 +2116,7 @@ class Collection(common.BaseObject):
                 collation=collation,
                 session=session,
                 client=self.__database.client)
+            logger.debug('aggregate stats ' + str(self._stats()))
 
             if "cursor" in result:
                 cursor = result["cursor"]
@@ -2358,7 +2371,7 @@ class Collection(common.BaseObject):
         with self._socket_for_reads() as (sock_info, slave_ok):
             result = self._command(sock_info, cmd, slave_ok,
                                  collation=collation)["retval"]
-            print 'group stats', self._stats()
+            logger.debug('group stats ' + str(self._stats()))
             return result
 
     def rename(self, new_name, session=None, **kwargs):
@@ -2408,9 +2421,11 @@ class Collection(common.BaseObject):
                 if sock_info.max_wire_version >= 5 and self.write_concern:
                     cmd['writeConcern'] = self.write_concern.document
                 cmd.update(kwargs)
-                return sock_info.command(
+                _result = sock_info.command(
                     'admin', cmd, parse_write_concern_error=True,
                     session=s, client=self.__database.client)
+                logger.debug('rename stats ' + str(self._stats()))
+                return _result
 
     def distinct(self, key, filter=None, session=None, **kwargs):
         """Get a list of distinct values for `key` among all documents
@@ -2462,7 +2477,7 @@ class Collection(common.BaseObject):
             result = self._command(sock_info, cmd, slave_ok,
                                  read_concern=self.read_concern,
                                  collation=collation, session=session)["values"]
-            print 'distinct stats', self._stats()
+            logger.debug('distinct stats ' + str(self._stats()))
             return result
 
     def map_reduce(self, map, reduce, out, full_response=False, session=None,
@@ -2551,7 +2566,7 @@ class Collection(common.BaseObject):
                     parse_write_concern_error=not inline,
                     collation=collation, session=session)
             
-            print 'map_reduce stats', self._stats()
+            logger.debug('map_reduce stats ' + str(self._stats()))
 
         if full_response or not response.get('result'):
             return response
@@ -2612,7 +2627,7 @@ class Collection(common.BaseObject):
                 res = self._command(sock_info, cmd, slave_ok,
                                     collation=collation, session=session)
 
-        print 'inline_map_reduce stats', self._stats()
+        logger.debug('inline_map_reduce stats ' + str(self._stats()))
 
         if full_response:
             return res
@@ -2668,7 +2683,7 @@ class Collection(common.BaseObject):
                                 collation=collation, session=session,
                                 retryable_write=retryable_write)
             _check_write_command_response(out)
-            print '__find_and_modify stats', self._stats()
+            logger.debug('__find_and_modify stats ' + str(self._stats()))
             return out.get("value")
 
         return self.__database.client._retryable_write(
@@ -3084,7 +3099,7 @@ class Collection(common.BaseObject):
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 allowable_errors=[_NO_OBJ_ERROR], collation=collation,
                 session=session, retryable_write=retryable_write)
-            print 'find_and_modify stats', self._stats()
+            logger.debug('find_and_modify stats ' + str(self._stats()))
             return result
 
         out = self.__database.client._retryable_write(
