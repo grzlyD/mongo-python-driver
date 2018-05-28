@@ -196,7 +196,10 @@ class Collection(common.BaseObject):
         return self.__database.client._socket_for_writes()
 
     def _stats(self):
-        return self.__database.command('getLastRequestStatistics')
+        try:
+            return self.__database.command('getLastRequestStatistics')
+        except OperationFailure:
+            return 'no getLastRequestStatistics'
 
     def _command(self, sock_info, command, slave_ok=False,
                  read_preference=None,
@@ -1675,7 +1678,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
-            logger.debug('__create_index stats ' + self._stats()))
+            logger.debug('__create_index stats ' + self._stats())
 
     def create_index(self, keys, session=None, **kwargs):
         """Creates an index on this collection.
