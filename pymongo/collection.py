@@ -270,7 +270,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 collation=collation, session=session)
-            logger.debug('create,{},{},{}'.format(self.name, self._stats(), options))
+            logger.debug('{},create,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), options))
 
     def __getattr__(self, name):
         """Get a sub-collection of this collection by name.
@@ -587,7 +587,7 @@ class Collection(common.BaseObject):
                     session=session,
                     client=self.__database.client,
                     retryable_write=retryable_write)
-                logger.debug('insert_one,{},{},{}'.format(self.name, self._stats(), doc))
+                logger.debug('{},insert_one,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), doc))
                 return _result
 
             result = self.__database.client._retryable_write(
@@ -601,7 +601,7 @@ class Collection(common.BaseObject):
                     bypass_doc_val, message.insert, self.__full_name, [doc],
                     check_keys, False, concern, False,
                     self.__write_response_codec_options)
-                logger.debug('insert_one_legacy,{},{},{}'.format(self.name, self._stats(), doc))
+                logger.debug('{},insert_one_legacy,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), doc))
 
         if not isinstance(doc, RawBSONDocument):
             return doc.get('_id')
@@ -812,7 +812,7 @@ class Collection(common.BaseObject):
                 session=session,
                 client=self.__database.client,
                 retryable_write=retryable_write).copy()
-            logger.debug('update,{},{},{}'.format(self.name, self._stats(), update_doc))
+            logger.debug('{},update,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), update_doc))
             _check_write_command_response(result)
             # Add the updatedExisting field for compatibility.
             if result.get('n') and 'upserted' not in result:
@@ -832,7 +832,7 @@ class Collection(common.BaseObject):
                 bypass_doc_val, message.update, self.__full_name, upsert,
                 multi, criteria, document, False, concern, check_keys,
                 self.__write_response_codec_options)
-            logger.debug('update_legacy,{},{},{}'.format(self.name, self._stats(), update_doc))
+            logger.debug('{},update_legacy,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), update_doc))
             return result
 
     def _update_retryable(
@@ -1116,7 +1116,7 @@ class Collection(common.BaseObject):
                 session=session,
                 client=self.__database.client,
                 retryable_write=retryable_write)
-            logger.debug('delete,{},{},{}'.format(self.name, self._stats(), delete_doc))
+            logger.debug('{},delete,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), delete_doc))
             _check_write_command_response(result)
             return result
         else:
@@ -1126,7 +1126,7 @@ class Collection(common.BaseObject):
                 False, message.delete, self.__full_name, criteria,
                 False, concern, self.__write_response_codec_options,
                 int(not multi))
-            logger.debug('delete_legacy,{},{},{}'.format(self.name, self._stats(), delete_doc))
+            logger.debug('{},delete_legacy,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), delete_doc))
             return result
 
     def _delete_retryable(
@@ -1512,7 +1512,7 @@ class Collection(common.BaseObject):
             result = self._command(sock_info, cmd, slave_ok,
                                    read_concern=self.read_concern,
                                    session=session)
-            logger.debug('parallel_scan,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},parallel_scan,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
 
         cursors = []
         for cursor in result['cursors']:
@@ -1533,7 +1533,7 @@ class Collection(common.BaseObject):
                 read_concern=self.read_concern,
                 collation=collation,
                 session=session)
-            logger.debug('count,{},{},,'.format(self.name, self._stats()))
+            logger.debug('{},count,{},{},,'.format(datetime.datetime.now(), self.name, self._stats()))
             
         if res.get("errmsg", "") == "ns missing":
             return 0
@@ -1648,7 +1648,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
-            logger.debug('create_indexes,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},create_indexes,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
 
         return names
 
@@ -1682,7 +1682,7 @@ class Collection(common.BaseObject):
                 write_concern=self.write_concern,
                 parse_write_concern_error=True,
                 session=session)
-            logger.debug('create_index,{},{},{}'.format(self.name, self._stats(), index))
+            logger.debug('{},create_index,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), index))
 
     def create_index(self, keys, session=None, **kwargs):
         """Creates an index on this collection.
@@ -1903,7 +1903,7 @@ class Collection(common.BaseObject):
                           write_concern=self.write_concern,
                           parse_write_concern_error=True,
                           session=session)
-            logger.debug('drop_index,{},{},{}'.format(self.name, self._stats(), name))
+            logger.debug('{},drop_index,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), name))
 
     def reindex(self, session=None, **kwargs):
         """Rebuilds all indexes on this collection.
@@ -1937,7 +1937,7 @@ class Collection(common.BaseObject):
             result = self._command(
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 parse_write_concern_error=True, session=session)
-            logger.debug('reindex,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},reindex,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
             return result
 
     def list_indexes(self, session=None):
@@ -1972,7 +1972,7 @@ class Collection(common.BaseObject):
                                                ReadPreference.PRIMARY,
                                                codec_options,
                                                session=s)["cursor"]
-                        logger.debug('list_indexes,{},{},{},'.format(self.name, self._stats(), cmd))
+                        logger.debug('{},list_indexes,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
                     except OperationFailure as exc:
                         # Ignore NamespaceNotFound errors to match the behavior
                         # of reading from *.system.indexes.
@@ -2123,7 +2123,7 @@ class Collection(common.BaseObject):
                 collation=collation,
                 session=session,
                 client=self.__database.client)
-            logger.debug('aggregate,{},{},{}'.format(self.name, self._stats(), pipeline))
+            logger.debug('{},aggregate,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), pipeline))
 
             if "cursor" in result:
                 cursor = result["cursor"]
@@ -2378,7 +2378,7 @@ class Collection(common.BaseObject):
         with self._socket_for_reads() as (sock_info, slave_ok):
             result = self._command(sock_info, cmd, slave_ok,
                                  collation=collation)["retval"]
-            logger.debug('group,{},{},{}'.format(self.name, self._stats(), group))
+            logger.debug('{},group,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), group))
             return result
 
     def rename(self, new_name, session=None, **kwargs):
@@ -2431,7 +2431,7 @@ class Collection(common.BaseObject):
                 _result = sock_info.command(
                     'admin', cmd, parse_write_concern_error=True,
                     session=s, client=self.__database.client)
-                logger.debug('rename,{},{},{}'.format(self.name, self._stats(), new_name))
+                logger.debug('{},rename,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), new_name))
                 return _result
 
     def distinct(self, key, filter=None, session=None, **kwargs):
@@ -2484,7 +2484,7 @@ class Collection(common.BaseObject):
             result = self._command(sock_info, cmd, slave_ok,
                                  read_concern=self.read_concern,
                                  collation=collation, session=session)["values"]
-            logger.debug('distinct,{},{},{}'.format(self.name, self._stats(), key))
+            logger.debug('{},distinct,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), key))
             return result
 
     def map_reduce(self, map, reduce, out, full_response=False, session=None,
@@ -2573,7 +2573,7 @@ class Collection(common.BaseObject):
                     parse_write_concern_error=not inline,
                     collation=collation, session=session)
             
-            logger.debug('map_reduce,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},map_reduce,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
 
         if full_response or not response.get('result'):
             return response
@@ -2634,7 +2634,7 @@ class Collection(common.BaseObject):
                 res = self._command(sock_info, cmd, slave_ok,
                                     collation=collation, session=session)
 
-        logger.debug('inline_map_reduce,{},{},{}'.format(self.name, self._stats(), cmd))
+        logger.debug('{},inline_map_reduce,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
 
         if full_response:
             return res
@@ -2690,7 +2690,7 @@ class Collection(common.BaseObject):
                                 collation=collation, session=session,
                                 retryable_write=retryable_write)
             _check_write_command_response(out)
-            logger.debug('_find_and_modify,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},_find_and_modify,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
             return out.get("value")
 
         return self.__database.client._retryable_write(
@@ -3106,7 +3106,7 @@ class Collection(common.BaseObject):
                 sock_info, cmd, read_preference=ReadPreference.PRIMARY,
                 allowable_errors=[_NO_OBJ_ERROR], collation=collation,
                 session=session, retryable_write=retryable_write)
-            logger.debug('find_and_modify,{},{},{}'.format(self.name, self._stats(), cmd))
+            logger.debug('{},find_and_modify,{},{},"{}"'.format(datetime.datetime.now(), self.name, self._stats(), cmd))
             return result
 
         out = self.__database.client._retryable_write(
